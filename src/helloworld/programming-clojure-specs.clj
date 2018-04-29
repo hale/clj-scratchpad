@@ -2,4 +2,4 @@
   (:require [clojure.spec.alpha :as s]))
 
 
-(clojure.spec/valid? number? 44)
+(s/valid? number? 44)
