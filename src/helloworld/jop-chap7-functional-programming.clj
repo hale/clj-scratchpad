@@ -16,10 +16,7 @@
 (def fifth (comp first rest rest rest rest)) ; read left to right
 (= 5 (fifth [1 2 3 4 5]))
 
-(defn fnth [n]
-  (apply comp
-         (cons first
-               (take (dec n) (repeat rest)))))
+(defn fnth [n] (apply comp (cons first (take (dec n) (repeat rest)))))
 
 ((fnth 3) [1 2 3 4 5 5])
 
@@ -130,3 +127,51 @@
 
 (convert simple-imperial [1 :yard])
 
+;; Sort-by can be used with partial
+
+(def play-data [{:band "Burial", :plays 979 :loved 9}
+                {:band "Eno", :plays 2333 :loved 15}
+                {:band "Bill Evans", :plays 979 :loved 9}
+                {:band "Magma", :plays 2665 :loved 31}])
+
+(def sort-by-loved-ratio (partial sort-by #(/ (:plays %) (:loved %))))
+(sort-by-loved-ratio play-data)
+
+; pull out into named function for readability (?)
+(defn loved-ratio [d] (/ (:plays d) (:loved d)))
+(def sort-by-loved-ratio (partial sort-by loved-ratio))
+(sort-by-loved-ratio play-data)
+
+; named function uses destructuring
+(defn loved-ratio [{plays :plays loved :loved}] (/ plays loved))
+(def sort-by-loved-ratio (partial sort-by loved-ratio))
+(sort-by-loved-ratio play-data)
+
+; insert loved ratio into map
+(map #(assoc % :loved-ratio (loved-ratio %)) play-data)
+(map #(merge % {:loved-ratio (loved-ratio %)}) play-data)
+
+; what if we want to sort by multiple columns, as in fall back to second column if first columns are equal etc?
+(defn columns [column-names]
+  (fn [row]
+    (vec (map row column-names))))
+
+(sort-by (columns [:plays :loved :band]) plays)
+
+; dig into how this works
+((columns [:plays :loved :band]) (first play-data))
+
+; referential transparency
+(defn keys-apply [f ks m]
+  (let [only (select-keys m ks)]
+    (zipmap (keys only)
+            (map f (vals only)))))
+
+(keys-apply #(* 10 %) #{:plays} (play-data 0))
+(keys-apply (partial * 10) #{:plays} (play-data 0))
+(keys-apply (partial * 10) #{:plays :loved} (play-data 0))
+
+(defn manip-map [f ks m]
+  (merge m (keys-apply f ks m)))
+
+(manip-map (partial * 10) #{:plays} (play-data 0))
